@@ -1,0 +1,552 @@
+<!--Written By Shahid -->
+<style>
+    body {  background-color: #3f3e3b !important;}
+#chartdiv {
+  width: 100%;
+  height: 775px;
+}
+#barchartdiv {
+  width: 100%;
+  height: 500px;
+}
+
+ .amcharts-chart-div a{display:none !important}  
+</style>
+
+<!-- Resources -->
+<script src="https://www.amcharts.com/lib/3/amcharts.js"></script>
+<script src="https://www.amcharts.com/lib/3/serial.js"></script>
+<script src="https://www.amcharts.com/lib/3/themes/light.js"></script>
+<script src="https://www.amcharts.com/lib/3/pie.js"></script>
+<script src="https://www.amcharts.com/lib/3/ammap_amcharts_extension.js"></script>
+<script src="https://www.amcharts.com/lib/3/maps/js/usa2Low.js"></script>
+<script src="https://www.amcharts.com/lib/3/plugins/export/export.min.js"></script>
+<link rel="stylesheet" href="https://www.amcharts.com/lib/3/plugins/export/export.css" type="text/css" media="all" />
+<script src="https://www.amcharts.com/lib/3/themes/dark.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" crossorigin="anonymous"></script>
+
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.15/css/jquery.dataTables.min.css" />
+    <script src="//cdn.datatables.net/1.10.15/js/jquery.dataTables.min.js">
+
+
+<!-- Latest compiled and minified JavaScript -->
+<script type="text/plain"  src="https://gist.github.com/raw/2625891/waitForKeyElements.js"></script>
+
+   <script>
+ $(document).ready(function() {
+    $.ajax({
+        url: "http://localhost:1234/getChartData"
+    }).then(function(dataProvider) {
+    //var dataProvider =JSON.stringify(data);
+    dispaly(dataProvider)
+      });    
+        
+    
+});
+       
+ $(document).on("click", 'div[id^="amcharts_pie_"]', function () {
+     $('#myModal').modal();
+    var location =""; 
+    //alert("tile" + $(this).attr("title"));
+    location = $(this).attr("title");
+         $.ajax({
+        url:"http://localhost:1234/calDataDetail/"+location
+    }).then(function(callDetail){
+              $('.modal-title').text("Call Details :" + location);
+              $('#datatable').dataTable({
+                        data: callDetail,
+/*                        "fixedHeader":true,
+                        "scrollY":"200px",
+                        "scrollX": true,*/
+                        "destroy": true,
+                        columns: [
+                            { 'data': 'callStatus' },
+                            { 'data': 'agent' },
+                            { 'data': 'callStartTime' },
+                            { 'data': 'callEndTime' },
+                            { 'data': 'accountNumber' },
+                            { 'data': 'callerLastName' },
+                            { 'data': 'callerAddress' },
+                            { 'data': 'callerAudio' },
+                            { 'data': 'callerVoiceText' }                            
+                            
+                        ]
+                    });
+             
+    });  
+  // $("#myModal").css('display', 'block').removeClass('fade');
+  
+ });
+       
+
+ /*       $(document).on("click", '#myModal' ,function () {
+  $("#myModal").addClass('fade').css('display', 'none');
+  
+ });*/
+       
+ </script> 
+<!-- Chart code -->
+<script>
+/**
+ * Create a map
+ */
+function dispaly(dataProvider)
+{
+var map = AmCharts.makeChart("chartdiv", {
+  "type": "map",
+  "theme": "dark",
+  "centered":"false",
+  
+
+  /**
+   * Data Provider
+   * The images contains pie chart information
+   * The handler for `positionChanged` event will take care
+   * of creating external elements, position them and create
+   * Pie chart instances in them
+   */
+  "dataProvider": dataProvider
+  ,
+  
+  /**
+   * Add event to execute when the map is zoomed/moved
+   * It also is executed when the map first loads
+   */
+  "listeners": [{
+    "event": "positionChanged",
+    "method": updateCustomMarkers
+  },{
+      "event": "click",
+    "method": displayDetail
+  }
+              ]
+});
+    
+ /*   map.addEventListener("click",function(event){
+    alert("HI");
+});
+*/}
+
+ 
+    function displayDetail(event)
+    {
+       
+        // alert("HI");
+    }
+
+/**
+ * Creates and positions custom markers (pie charts)
+ */
+function updateCustomMarkers(event) {
+  // get map object
+  var map = event.chart;
+
+  // go through all of the images
+  for (var x = 0; x < map.dataProvider.images.length; x++) {
+
+    // get MapImage object
+    var image = map.dataProvider.images[x];
+
+    // Is it a Pie?
+    if (image.pie === undefined) {
+      continue;
+    }
+
+    // create id
+    if (image.id === undefined) {
+      image.id = "amcharts_pie_" + x;
+    }
+    // Add theme
+    if ("undefined" == typeof image.pie.theme) {
+      image.pie.theme = map.theme;
+    }
+
+    // check if it has corresponding HTML element
+    if ("undefined" == typeof image.externalElement) {
+      image.externalElement = createCustomMarker(image);
+    }
+
+    // reposition the element accoridng to coordinates
+    var xy = map.coordinatesToStageXY(image.longitude, image.latitude);
+    image.externalElement.style.top = xy.y+ "px";
+    image.externalElement.style.left = xy.x + "px";
+    image.externalElement.style.marginTop = Math.round(image.height / -2) + "px";
+    image.externalElement.style.marginLeft = Math.round(image.width / -2) + "px";
+  }
+}
+
+/**
+ * Creates a custom map marker - a div for container and a
+ * pie chart in it
+ */
+function createCustomMarker(image) {
+
+  // Create chart container
+  var holder = document.createElement("div");
+  holder.id = image.id;
+  holder.title = image.title;
+  holder.style.position = "absolute";
+  holder.style.width = image.width + "px";
+  holder.style.height = image.height + "px";
+  
+   
+
+  // Append the chart container to the map container
+  image.chart.chartDiv.appendChild(holder);
+
+  // Create a pie chart
+  var chart = AmCharts.makeChart(image.id, image.pie);
+   // alert(image.id);
+
+  return holder;
+}
+ 
+    
+</script>
+
+<!-- Script for drill down-->
+
+<script>
+var chartData = [{
+  "category": "-Ve",
+  "callVolume": 23,
+  "url": "#",
+  "color": "#FF0000",   
+  "description": "click to drill-down",
+  "departments": [{
+    "category": "Billing",
+    "callVolume": 4
+  }, {
+    "category": "Account",
+    "callVolume": 3
+  }, {
+    "category": "Software",
+    "callVolume": 10
+  }, {
+    "category": "Hardware",
+    "callVolume": 4
+  }, {
+    "category": "Other",
+    "callVolume": 2
+  }]
+}, {
+  "category": "Neutral",
+  "callVolume": 26,
+  "url": "#",
+  "color": "#FFA500", 
+  "description": "click to drill-down",
+  "departments": [{
+    "category": "Billing",
+    "callVolume": 4
+  }, {
+    "category": "Account",
+    "callVolume": 6
+  }, {
+    "category": "Software",
+    "callVolume": 10
+  }, {
+    "category": "Hardware",
+    "callVolume": 4
+  }, {
+    "category": "Other",
+    "callVolume": 2
+  }]
+}, {
+  "category": "+Ve",
+  "callVolume": 30,
+  "url": "#",
+  "color": "#42f465", 
+  "description": "click to drill-down",
+  "departments": [{
+    "category": "Billing",
+    "callVolume": 4
+  }, {
+    "category": "Account",
+    "callVolume": 10
+  }, {
+    "category": "Software",
+    "callVolume": 10
+  }, {
+    "category": "Hardware",
+    "callVolume": 4
+  }, {
+    "category": "Other",
+    "callVolume": 2
+  }]
+}];
+
+var barChart = AmCharts.makeChart("barchartdiv", {
+  "type": "serial",
+  "creditsPosition": "top-right",
+  "autoMargins": false,
+  "marginLeft": 30,
+  "marginRight": 8,
+  "marginTop": 10,
+  "marginBottom": 26,
+  "titles": [{
+    "text": "Laction Based Call Performance"
+  }],
+  "dataProvider": chartData,
+  "startDuration": 1,
+  "graphs": [{
+    "alphaField": "alpha",
+    "balloonText": "<span style='font-size:13px;'>[[title]] in [[category]]:<b>[[value]]</b> [[additional]]</span> <br>[[description]]",
+    "dashLengthField": "dashLengthColumn",
+    "fillAlphas": 1,
+    "title": "callVolume",
+    "type": "column",
+    "valueField": "callVolume",
+    "urlField": "url",
+    "fillColorsField": "color",
+  }],
+  "categoryField": "category",
+  "categoryAxis": {
+    "gridPosition": "start",
+    "axisAlpha": 0,
+    "tickLength": 0
+  }
+});
+
+barChart.addListener("clickGraphItem", function(event) {
+  if ('object' === typeof event.item.dataContext.departments) {
+
+    // set the monthly data for the clicked month
+    event.chart.dataProvider = event.item.dataContext.departments;
+
+    // update the chart title
+    event.chart.titles[0].text = event.item.dataContext.category + ' :- category wise data';
+
+    // let's add a label to go back to yearly data
+    event.chart.addLabel(
+      35, 20,
+      "< Move back ",
+      undefined,
+      15,
+      undefined,
+      undefined,
+      undefined,
+      true,
+      'javascript:resetChart();');
+
+    // validate the new data and make the chart animate again
+    event.chart.validateData();
+    event.chart.animateAgain();
+  }
+});
+
+// function which resets the chart back to yearly data
+function resetChart() {
+  barChart.dataProvider = chartData;
+  barChart.titles[0].text = 'Laction Based Call Performance';
+
+  // remove the "Go back" label
+  barChart.allLabels = [];
+
+  barChart.validateData();
+  barChart.animateAgain();
+}
+</script>
+
+<!-- Script for line chart -->
+<script type="text/javascript">
+			AmCharts.makeChart("linechartdiv",
+				{
+					"type": "serial",
+					"categoryField": "date",
+					"dataDateFormat": "YYYY-MM-DD HH",
+					"categoryAxis": {
+						"minPeriod": "hh",
+						"parseDates": true
+					},
+					"chartCursor": {
+						"enabled": true,
+						"categoryBalloonDateFormat": "JJ:NN"
+					},
+					"chartScrollbar": {
+						"enabled": true
+					},
+					"trendLines": [],
+					"graphs": [
+						{
+							"bullet": "round",
+							"id": "AmGraph-1",
+							"title": "Billig",
+							"valueField": "Billig"
+						},
+						{
+							"bullet": "square",
+							"id": "AmGraph-2",
+							"title": "Account",
+							"valueField": "Account"
+						},
+						{
+							"bullet": "round",
+							"id": "AmGraph-3",
+							"title": "Software",
+							"valueField": "Software"
+						},
+						{
+							"bullet": "square",
+							"id": "AmGraph-4",
+							"title": "Hardware",
+							"valueField": "Hardware"
+						},
+						{
+							"bullet": "round",
+							"id": "AmGraph-5",
+							"title": "Other",
+							"valueField": "Other"
+						}
+					],
+					"guides": [],
+					"valueAxes": [
+						{
+							"id": "ValueAxis-1",
+							"title": "Call Volume"
+						}
+					],
+					"allLabels": [],
+					"balloon": {},
+					"legend": {
+						"enabled": true,
+						"useGraphSettings": true
+					},
+					"titles": [
+						{
+							"id": "Title-1",
+							"size": 15,
+							"text": "Time Series Hourly"
+						}
+					],
+					"dataProvider": [
+						{
+							"date": "2014-03-01 08",
+							"Billig": 8,
+							"Account": 5,
+							"Software": 45,
+							"Hardware": 40,
+							"Other": 66
+						},
+						{
+							"date": "2014-03-01 09",
+							"Billig": 6,
+							"Account": 7,
+							"Software": 12,
+							"Hardware": 31,
+							"Other": 42
+						},
+						{
+							"date": "2014-03-01 10",
+							"Billig": 2,
+							"Account": 3,
+							"Software": 47,
+							"Hardware": 31,
+							"Other": 13
+						},
+						{
+							"date": "2014-03-01 11",
+							"Billig": 1,
+							"Account": 3,
+							"Software": 59,
+							"Hardware": 79,
+							"Other": 62
+						},
+						{
+							"date": "2014-03-01 12",
+							"Billig": 2,
+							"Account": 1,
+							"Software": 92,
+							"Hardware": 35,
+							"Other": 95
+						},
+						{
+							"date": "2014-03-01 13",
+							"Billig": 3,
+							"Account": 2,
+							"Software": 90,
+							"Hardware": 90,
+							"Other": 15
+						},
+						{
+							"date": "2014-03-01 14",
+							"Billig": 6,
+							"Account": 8,
+							"Software": 34,
+							"Hardware": 95,
+							"Other": 22
+						},
+						{
+							"date": "2014-03-01 15",
+							"Billig": 10,
+							"Account": 18,
+							"Software": 24,
+							"Hardware": 65,
+							"Other": 29
+						},
+						{
+							"date": "2014-03-01 16",
+							"Billig": 5,
+							"Account": 10,
+							"Software": 45,
+							"Hardware": 75,
+							"Other": 20
+						},
+						{
+							"date": "2014-03-01 17",
+							"Billig": 6,
+							"Account": 7,
+							"Software": 26,
+							"Hardware": 87,
+							"Other": 21
+						}
+					]
+				}
+			);
+		</script>
+
+<!-- HTML -->
+<div id="chartdiv"></div>
+
+<div id="myModal" class="modal fade" data-keyboard="false" data-backdrop="static"  tabindex="-1" >
+  <!--div class="modal-dialog" style="width: 90%; height:50%;"-->
+       <div class="modal-dialog modal-lg">
+
+    <!-- Modal content-->
+
+      <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title"></h4>
+ 
+        <div class="col-md-6 quad" id="barchartdiv"></div> 
+    <!--    <div class="col-md-6 quad" id="linechartdiv" style="width: 100%; height: 400px; background-color: #FFFFFF;" ></div>  -->
+
+          </div>
+         
+      <div id="dataContent" class="modal-body">
+          <table id="datatable" class="display compact" cellspacing="0" width="100%">
+                <thead>
+                    <tr>
+                        <th>Call Status</th>
+                        <th>Agent</th>
+                        <th>Call Start Time</th>
+                        <th>Call End Time</th>
+                        <th>Account Number</th>
+                        <th>Caller Last Name</th>
+                        <th>Caller Address</th>
+                        <th>Caller Audio</th>
+                        <th>Caller Voice Text</th>
+                        </tr>
+                 </thead>
+            </table>
+         
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+
+  </div>
+</div>
